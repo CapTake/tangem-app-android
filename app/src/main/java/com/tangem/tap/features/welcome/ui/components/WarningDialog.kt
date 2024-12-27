@@ -56,6 +56,22 @@ internal fun WarningDialog(warning: WarningModel?) {
                 ),
             )
         }
+        is WarningModel.OfflineAttestationFailedWarning -> {
+            BasicDialog(
+                title = stringResourceSafe(id = R.string.warning_failed_to_verify_card_title),
+                message = stringResourceSafe(id = R.string.warning_failed_to_verify_card_message),
+                onDismissDialog = warning.onDismiss,
+                isDismissable = true,
+                confirmButton = DialogButtonUM(
+                    title = stringResourceSafe(id = R.string.alert_button_request_support),
+                    onClick = warning.onRequestSupportClick,
+                ),
+                dismissButton = DialogButtonUM(
+                    title = stringResourceSafe(id = R.string.common_cancel),
+                    onClick = warning.onDismiss,
+                ),
+            )
+        }
     }
 }
 

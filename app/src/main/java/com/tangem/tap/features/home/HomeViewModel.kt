@@ -14,6 +14,7 @@ import com.tangem.core.navigation.url.UrlOpener
 import com.tangem.domain.card.ScanCardProcessor
 import com.tangem.domain.card.SetAccessCodeRequestPolicyUseCase
 import com.tangem.domain.common.util.cardTypesResolver
+import com.tangem.domain.feedback.SendFeedbackEmailUseCase
 import com.tangem.domain.models.scan.ScanResponse
 import com.tangem.domain.settings.ShouldSaveAccessCodesUseCase
 import com.tangem.domain.tokens.TokensAction
@@ -39,6 +40,7 @@ import javax.inject.Inject
 @Suppress("LongParameterList")
 @HiltViewModel
 internal class HomeViewModel @Inject constructor(
+    sendFeedbackEmailUseCase: SendFeedbackEmailUseCase,
     private val shouldSaveAccessCodesUseCase: ShouldSaveAccessCodesUseCase,
     private val setAccessCodeRequestPolicyUseCase: SetAccessCodeRequestPolicyUseCase,
     private val scanCardProcessor: ScanCardProcessor,
@@ -48,7 +50,7 @@ internal class HomeViewModel @Inject constructor(
     private val analyticsEventHandler: AnalyticsEventHandler,
 ) : ViewModel() {
 
-    private val tangemErrorHandler = TangemTangemErrorsHandler(store)
+    private val tangemErrorHandler = TangemTangemErrorsHandler(store, sendFeedbackEmailUseCase)
 
     fun onScanClick() {
         analyticsEventHandler.send(IntroductionProcess.ButtonScanCard())

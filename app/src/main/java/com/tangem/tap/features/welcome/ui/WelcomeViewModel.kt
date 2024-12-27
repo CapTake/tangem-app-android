@@ -3,10 +3,13 @@ package com.tangem.tap.features.welcome.ui
 import android.os.Bundle
 import androidx.lifecycle.*
 import com.tangem.common.core.TangemError
+import com.tangem.common.core.TangemSdkError
 import com.tangem.common.routing.AppRoute
 import com.tangem.common.routing.bundle.unbundle
 import com.tangem.common.routing.entity.SerializableIntent
 import com.tangem.core.analytics.Analytics
+import com.tangem.domain.feedback.SendFeedbackEmailUseCase
+import com.tangem.domain.feedback.models.FeedbackEmailType
 import com.tangem.domain.wallets.legacy.UserWalletsListError
 import com.tangem.tap.common.analytics.events.SignIn
 import com.tangem.tap.common.redux.global.GlobalAction
@@ -19,12 +22,14 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import org.rekotlin.StoreSubscriber
 import javax.inject.Inject
 
 @HiltViewModel
 internal class WelcomeViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
+    private val sendFeedbackEmailUseCase: SendFeedbackEmailUseCase,
 ) : ViewModel(),
     StoreSubscriber<WelcomeState>,
     DefaultLifecycleObserver {
@@ -102,6 +107,14 @@ internal class WelcomeViewModel @Inject constructor(
             )
             is UserWalletsListError.BiometricsAuthenticationDisabled -> WarningModel.BiometricsDisabledWarning(
                 onDismiss = this::clearUserWallets,
+            )
+            is TangemSdkError.CardOfflineVerificationFailed -> WarningModel.OfflineAttestationFailedWarning(
+                onRequestSupportClick = {
+                    viewModelScope.launch {
+                        sendFeedbackEmailUseCase(type = FeedbackEmailType.ScanningProblem)
+                    }
+                },
+                onDismiss = ::dismissWarning,
             )
             else -> null
         }

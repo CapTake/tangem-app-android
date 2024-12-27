@@ -2,6 +2,7 @@ package com.tangem.tap.domain.scanCard
 
 import com.tangem.common.CompletionResult
 import com.tangem.common.core.TangemError
+import com.tangem.common.core.TangemSdkError
 import com.tangem.common.doOnFailure
 import com.tangem.common.doOnSuccess
 import com.tangem.common.routing.AppRoute
@@ -17,6 +18,7 @@ import com.tangem.domain.common.extensions.withMainContext
 import com.tangem.domain.common.util.twinsIsTwinned
 import com.tangem.domain.feedback.models.FeedbackEmailType
 import com.tangem.domain.models.scan.ScanResponse
+import com.tangem.domain.redux.StateDialog
 import com.tangem.domain.wallets.builder.UserWalletIdBuilder
 import com.tangem.tap.common.analytics.paramsInterceptor.CardContextInterceptor
 import com.tangem.tap.common.extensions.*
@@ -71,9 +73,7 @@ internal object LegacyScanProcessor {
         store.dispatchOnMain(GlobalAction.ScanFailsCounter.ChooseBehavior(result, analyticsSource))
 
         result
-            .doOnFailure { error ->
-                onFailure(error)
-            }
+            .doOnFailure { error -> onScanFailure(error = error, onFailure = onFailure) }
             .doOnSuccess { scanResponse ->
                 tangemSdkManager.changeDisplayedCardIdNumbersCount(scanResponse)
 
@@ -82,7 +82,6 @@ internal object LegacyScanProcessor {
                 showDisclaimerIfNeed(
                     scanResponse = scanResponse,
                     disclaimerWillShow = disclaimerWillShow,
-                    onFailure = onFailure,
                     nextHandler = { scanResponse2 ->
                         onScanSuccess(
                             scanResponse = scanResponse2,
@@ -114,7 +113,6 @@ internal object LegacyScanProcessor {
         scanResponse: ScanResponse,
         crossinline disclaimerWillShow: () -> Unit = {},
         crossinline nextHandler: suspend (ScanResponse) -> Unit,
-        crossinline onFailure: suspend (error: TangemError) -> Unit,
     ) {
         val disclaimer = scanResponse.card.createDisclaimer()
 
@@ -132,6 +130,29 @@ internal object LegacyScanProcessor {
                     }
                 }
             }
+        }
+    }
+
+    private suspend inline fun onScanFailure(
+        error: TangemError,
+        crossinline onFailure: suspend (TangemError) -> Unit,
+    ) {
+        if (error is TangemSdkError.CardOfflineVerificationFailed) {
+            store.dispatchOnMain(
+                GlobalAction.ShowDialog(
+                    StateDialog.CardOfflineAttestationFailed(
+                        onRequestSupportClick = {
+                            mainScope.launch {
+                                store.inject(DaggerGraphState::sendFeedbackEmailUseCase).invoke(
+                                    type = FeedbackEmailType.CardAttestationFailed,
+                                )
+                            }
+                        },
+                    ),
+                ),
+            )
+        } else {
+            onFailure(error)
         }
     }
 

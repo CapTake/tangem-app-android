@@ -13,4 +13,9 @@ internal sealed interface WarningModel {
     data class BiometricsDisabledWarning(
         val onDismiss: () -> Unit,
     ) : WarningModel
+
+    data class OfflineAttestationFailedWarning(
+        val onRequestSupportClick: () -> Unit,
+        val onDismiss: () -> Unit,
+    ) : WarningModel
 }

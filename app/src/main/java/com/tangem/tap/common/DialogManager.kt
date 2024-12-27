@@ -56,6 +56,13 @@ class DialogManager : StoreSubscriber<GlobalState> {
                 messageRes = R.string.nfc_error_unavailable,
                 context = context,
             )
+            is StateDialog.CardOfflineAttestationFailed -> SimpleCancelableAlertDialog.create(
+                titleRes = R.string.warning_failed_to_verify_card_title,
+                messageRes = R.string.warning_failed_to_verify_card_message,
+                primaryButtonRes = R.string.alert_button_request_support,
+                primaryButtonAction = state.dialog.onRequestSupportClick,
+                context = context,
+            )
             is AppDialog.AddressInfoDialog -> AddressInfoBottomSheetDialog(state.dialog, context)
             is AppDialog.TestActionsDialog -> TestActionsBottomSheetDialog(state.dialog, context)
             is AppDialog.RussianCardholdersWarningDialog -> RussianCardholdersWarningBottomSheetDialog(
