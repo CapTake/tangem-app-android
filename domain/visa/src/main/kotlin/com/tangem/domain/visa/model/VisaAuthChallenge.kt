@@ -19,13 +19,13 @@ fun VisaAuthChallenge.Card.toSignedChallenge(signedChallenge: String, salt: Stri
     return VisaAuthSignedChallenge.ByCardPublicKey(
         challenge = this,
         signature = signedChallenge,
-        salt = salt
+        salt = salt,
     )
 }
 
 fun VisaAuthChallenge.Wallet.toSignedChallenge(signedChallenge: String): VisaAuthSignedChallenge {
     return VisaAuthSignedChallenge.ByWallet(
         challenge = this,
-        signature = signedChallenge
+        signature = signedChallenge,
     )
 }

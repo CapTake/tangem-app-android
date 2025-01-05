@@ -42,5 +42,5 @@ internal object ApiConfigsModule {
 
     @Provides
     @IntoSet
-    fun provideTangemVisaConfig() : ApiConfig = TangemVisaAuth()
+    fun provideTangemVisaConfig(): ApiConfig = TangemVisaAuth()
 }

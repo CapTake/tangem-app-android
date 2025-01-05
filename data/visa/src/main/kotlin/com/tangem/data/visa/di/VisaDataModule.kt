@@ -26,7 +26,6 @@ internal object VisaDataModule {
     }
 }
 
-
 @Module
 @InstallIn(SingletonComponent::class)
 internal interface VisaDataBindsModule {

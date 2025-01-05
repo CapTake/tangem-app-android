@@ -15,7 +15,6 @@ import com.tangem.datasource.api.onramp.OnrampApi
 import com.tangem.datasource.api.stakekit.StakeKitApi
 import com.tangem.datasource.api.tangemTech.TangemTechApi
 import com.tangem.datasource.api.tangemTech.TangemTechApiV2
-import com.tangem.datasource.api.visa.TangemVisaApi
 import com.tangem.datasource.api.visa.TangemVisaAuthApi
 import com.tangem.datasource.local.logs.AppLogsStore
 import com.tangem.datasource.local.preferences.AppPreferencesStore
@@ -177,7 +176,7 @@ internal object NetworkModule {
         @NetworkMoshi moshi: Moshi,
         @ApplicationContext context: Context,
         apiConfigsManager: ApiConfigsManager,
-    ) : TangemVisaAuthApi {
+    ): TangemVisaAuthApi {
         return createApi<TangemVisaAuthApi>(
             id = ApiConfig.ID.TangemVisaAuth,
             moshi = moshi,

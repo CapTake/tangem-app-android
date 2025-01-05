@@ -34,7 +34,7 @@ interface TangemVisaAuthApi {
         @Field("session_id") sessionId: String,
         @Field("signature") signature: String,
         @Field("salt") salt: String?,
-    ) : JWTResponse
+    ): JWTResponse
 
     @FormUrlEncoded
     @Headers("Content-Type: application/x-www-form-urlencoded")
@@ -43,5 +43,5 @@ interface TangemVisaAuthApi {
         @Field("client_id") clientId: String = "mobile-app-android",
         @Field("grant_type") grantType: String = "refresh_token",
         @Field("refresh_token") refreshToken: String,
-    ) : JWTResponse
+    ): JWTResponse
 }

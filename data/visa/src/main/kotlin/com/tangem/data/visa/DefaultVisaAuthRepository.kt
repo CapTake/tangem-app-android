@@ -19,30 +19,29 @@ internal class DefaultVisaAuthRepository @Inject constructor(
         withContext(dispatchers.io) {
             val response = visaAuthApi.generateNonceByCard(
                 cardId = cardId,
-                cardPublicKey = cardPublicKey
+                cardPublicKey = cardPublicKey,
             )
 
             VisaAuthChallenge.Card(
                 challenge = response.nonce,
-                session = VisaAuthSession(response.sessionId)
+                session = VisaAuthSession(response.sessionId),
             )
         }
 
     override suspend fun getCustomerWalletAuthChallenge(
         cardId: String,
         walletPublicKey: String,
-    ): VisaAuthChallenge.Wallet =
-        withContext(dispatchers.io) {
-            val response = visaAuthApi.generateNonceByWalletAddress(
-                customerId = cardId,
-                customerWalletAddress = walletPublicKey
-            )
+    ): VisaAuthChallenge.Wallet = withContext(dispatchers.io) {
+        val response = visaAuthApi.generateNonceByWalletAddress(
+            customerId = cardId,
+            customerWalletAddress = walletPublicKey,
+        )
 
-            VisaAuthChallenge.Wallet(
-                challenge = response.nonce,
-                session = VisaAuthSession(response.sessionId)
-            )
-        }
+        VisaAuthChallenge.Wallet(
+            challenge = response.nonce,
+            session = VisaAuthSession(response.sessionId),
+        )
+    }
 
     override suspend fun getAccessTokens(signedChallenge: VisaAuthSignedChallenge): VisaAuthTokens =
         withContext(dispatchers.io) {
@@ -51,21 +50,21 @@ internal class DefaultVisaAuthRepository @Inject constructor(
                     visaAuthApi.getAccessToken(
                         sessionId = signedChallenge.challenge.session.sessionId,
                         signature = signedChallenge.signature,
-                        salt = signedChallenge.salt
+                        salt = signedChallenge.salt,
                     )
                 }
                 is VisaAuthSignedChallenge.ByWallet -> {
                     visaAuthApi.getAccessToken(
                         sessionId = signedChallenge.challenge.session.sessionId,
                         signature = signedChallenge.signature,
-                        salt = null
+                        salt = null,
                     )
                 }
             }
 
             VisaAuthTokens(
                 accessToken = response.accessToken,
-                refreshToken = response.refreshToken
+                refreshToken = response.refreshToken,
             )
         }
 }
