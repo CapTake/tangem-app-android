@@ -10,7 +10,7 @@ import com.tangem.utils.coroutines.CoroutineDispatcherProvider
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
-class DefaultVisaAuthRepository @Inject constructor(
+internal class DefaultVisaAuthRepository @Inject constructor(
     private val visaAuthApi: TangemVisaAuthApi,
     private val dispatchers: CoroutineDispatcherProvider,
 ) : VisaAuthRepository {
