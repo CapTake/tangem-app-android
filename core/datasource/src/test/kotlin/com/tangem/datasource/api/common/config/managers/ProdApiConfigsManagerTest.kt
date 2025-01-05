@@ -179,7 +179,7 @@ internal class ProdApiConfigsManagerTest(private val model: Model) {
                 expected = ApiEnvironmentConfig(
                     environment = ApiEnvironment.STAGE,
                     baseUrl = "https://api-s.tangem.org/",
-                )
+                ),
             )
         }
 
