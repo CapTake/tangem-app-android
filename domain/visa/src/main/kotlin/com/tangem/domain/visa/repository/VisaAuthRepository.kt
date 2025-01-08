@@ -6,17 +6,9 @@ import com.tangem.domain.visa.model.VisaAuthTokens
 
 interface VisaAuthRepository {
 
-    suspend fun getCardAuthChallenge(
-        cardId: String,
-        cardPublicKey: String,
-    ): VisaAuthChallenge.Card
+    suspend fun getCardAuthChallenge(cardId: String, cardPublicKey: String): VisaAuthChallenge.Card
 
-    suspend fun getCustomerWalletAuthChallenge(
-        cardId: String,
-        walletPublicKey: String,
-    ): VisaAuthChallenge.Wallet
+    suspend fun getCustomerWalletAuthChallenge(cardId: String, walletPublicKey: String): VisaAuthChallenge.Wallet
 
-    suspend fun getAccessTokens(
-        signedChallenge: VisaAuthSignedChallenge,
-    ): VisaAuthTokens
+    suspend fun getAccessTokens(signedChallenge: VisaAuthSignedChallenge): VisaAuthTokens
 }

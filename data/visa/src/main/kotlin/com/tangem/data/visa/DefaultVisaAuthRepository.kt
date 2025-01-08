@@ -15,20 +15,18 @@ internal class DefaultVisaAuthRepository @Inject constructor(
     private val dispatchers: CoroutineDispatcherProvider,
 ) : VisaAuthRepository {
 
-    override suspend fun getCardAuthChallenge(
-        cardId: String,
-        cardPublicKey: String,
-    ): VisaAuthChallenge.Card = withContext(dispatchers.io) {
-        val response = visaAuthApi.generateNonceByCard(
-            cardId = cardId,
-            cardPublicKey = cardPublicKey,
-        )
+    override suspend fun getCardAuthChallenge(cardId: String, cardPublicKey: String): VisaAuthChallenge.Card =
+        withContext(dispatchers.io) {
+            val response = visaAuthApi.generateNonceByCard(
+                cardId = cardId,
+                cardPublicKey = cardPublicKey,
+            )
 
-        VisaAuthChallenge.Card(
-            challenge = response.nonce,
-            session = VisaAuthSession(response.sessionId),
-        )
-    }
+            VisaAuthChallenge.Card(
+                challenge = response.nonce,
+                session = VisaAuthSession(response.sessionId),
+            )
+        }
 
     override suspend fun getCustomerWalletAuthChallenge(
         cardId: String,
@@ -45,29 +43,28 @@ internal class DefaultVisaAuthRepository @Inject constructor(
         )
     }
 
-    override suspend fun getAccessTokens(
-        signedChallenge: VisaAuthSignedChallenge,
-    ): VisaAuthTokens = withContext(dispatchers.io) {
-        val response = when (signedChallenge) {
-            is VisaAuthSignedChallenge.ByCardPublicKey -> {
-                visaAuthApi.getAccessToken(
-                    sessionId = signedChallenge.challenge.session.sessionId,
-                    signature = signedChallenge.signature,
-                    salt = signedChallenge.salt,
-                )
+    override suspend fun getAccessTokens(signedChallenge: VisaAuthSignedChallenge): VisaAuthTokens =
+        withContext(dispatchers.io) {
+            val response = when (signedChallenge) {
+                is VisaAuthSignedChallenge.ByCardPublicKey -> {
+                    visaAuthApi.getAccessToken(
+                        sessionId = signedChallenge.challenge.session.sessionId,
+                        signature = signedChallenge.signature,
+                        salt = signedChallenge.salt,
+                    )
+                }
+                is VisaAuthSignedChallenge.ByWallet -> {
+                    visaAuthApi.getAccessToken(
+                        sessionId = signedChallenge.challenge.session.sessionId,
+                        signature = signedChallenge.signature,
+                        salt = null,
+                    )
+                }
             }
-            is VisaAuthSignedChallenge.ByWallet -> {
-                visaAuthApi.getAccessToken(
-                    sessionId = signedChallenge.challenge.session.sessionId,
-                    signature = signedChallenge.signature,
-                    salt = null,
-                )
-            }
-        }
 
-        VisaAuthTokens(
-            accessToken = response.accessToken,
-            refreshToken = response.refreshToken,
-        )
-    }
+            VisaAuthTokens(
+                accessToken = response.accessToken,
+                refreshToken = response.refreshToken,
+            )
+        }
 }
