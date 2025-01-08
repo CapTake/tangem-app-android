@@ -9,14 +9,14 @@ interface VisaAuthRepository {
     suspend fun getCardAuthChallenge(
         cardId: String,
         cardPublicKey: String,
-    ): com.tangem.domain.visa.model.VisaAuthChallenge.Card
+    ): VisaAuthChallenge.Card
 
     suspend fun getCustomerWalletAuthChallenge(
         cardId: String,
         walletPublicKey: String,
-    ): com.tangem.domain.visa.model.VisaAuthChallenge.Wallet
+    ): VisaAuthChallenge.Wallet
 
     suspend fun getAccessTokens(
-        signedChallenge: com.tangem.domain.visa.model.VisaAuthSignedChallenge,
-    ): com.tangem.domain.visa.model.VisaAuthTokens
+        signedChallenge: VisaAuthSignedChallenge,
+    ): VisaAuthTokens
 }

@@ -18,45 +18,45 @@ internal class DefaultVisaAuthRepository @Inject constructor(
     override suspend fun getCardAuthChallenge(
         cardId: String,
         cardPublicKey: String,
-    ): com.tangem.domain.visa.model.VisaAuthChallenge.Card = withContext(dispatchers.io) {
+    ): VisaAuthChallenge.Card = withContext(dispatchers.io) {
         val response = visaAuthApi.generateNonceByCard(
             cardId = cardId,
             cardPublicKey = cardPublicKey,
         )
 
-        com.tangem.domain.visa.model.VisaAuthChallenge.Card(
+        VisaAuthChallenge.Card(
             challenge = response.nonce,
-            session = com.tangem.domain.visa.model.VisaAuthSession(response.sessionId),
+            session = VisaAuthSession(response.sessionId),
         )
     }
 
     override suspend fun getCustomerWalletAuthChallenge(
         cardId: String,
         walletPublicKey: String,
-    ): com.tangem.domain.visa.model.VisaAuthChallenge.Wallet = withContext(dispatchers.io) {
+    ): VisaAuthChallenge.Wallet = withContext(dispatchers.io) {
         val response = visaAuthApi.generateNonceByWalletAddress(
             customerId = cardId,
             customerWalletAddress = walletPublicKey,
         )
 
-        com.tangem.domain.visa.model.VisaAuthChallenge.Wallet(
+        VisaAuthChallenge.Wallet(
             challenge = response.nonce,
-            session = com.tangem.domain.visa.model.VisaAuthSession(response.sessionId),
+            session = VisaAuthSession(response.sessionId),
         )
     }
 
     override suspend fun getAccessTokens(
-        signedChallenge: com.tangem.domain.visa.model.VisaAuthSignedChallenge,
-    ): com.tangem.domain.visa.model.VisaAuthTokens = withContext(dispatchers.io) {
+        signedChallenge: VisaAuthSignedChallenge,
+    ): VisaAuthTokens = withContext(dispatchers.io) {
         val response = when (signedChallenge) {
-            is com.tangem.domain.visa.model.VisaAuthSignedChallenge.ByCardPublicKey -> {
+            is VisaAuthSignedChallenge.ByCardPublicKey -> {
                 visaAuthApi.getAccessToken(
                     sessionId = signedChallenge.challenge.session.sessionId,
                     signature = signedChallenge.signature,
                     salt = signedChallenge.salt,
                 )
             }
-            is com.tangem.domain.visa.model.VisaAuthSignedChallenge.ByWallet -> {
+            is VisaAuthSignedChallenge.ByWallet -> {
                 visaAuthApi.getAccessToken(
                     sessionId = signedChallenge.challenge.session.sessionId,
                     signature = signedChallenge.signature,
@@ -65,7 +65,7 @@ internal class DefaultVisaAuthRepository @Inject constructor(
             }
         }
 
-        com.tangem.domain.visa.model.VisaAuthTokens(
+        VisaAuthTokens(
             accessToken = response.accessToken,
             refreshToken = response.refreshToken,
         )
