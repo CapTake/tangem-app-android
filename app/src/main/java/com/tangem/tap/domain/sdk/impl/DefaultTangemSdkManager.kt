@@ -43,6 +43,7 @@ import com.tangem.tap.domain.tasks.product.ScanProductTask
 import com.tangem.tap.domain.twins.CreateFirstTwinWalletTask
 import com.tangem.tap.domain.twins.CreateSecondTwinWalletTask
 import com.tangem.tap.domain.twins.FinalizeTwinTask
+import com.tangem.tap.domain.visa.VisaCardScanHandler
 import com.tangem.wallet.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -53,9 +54,10 @@ import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
 
 @Suppress("TooManyFunctions", "LargeClass")
-class DefaultTangemSdkManager(
+internal class DefaultTangemSdkManager(
     private val cardSdkConfigRepository: CardSdkConfigRepository,
     private val resources: Resources,
+    private val visaCardScanHandler: VisaCardScanHandler,
 ) : TangemSdkManager {
 
     private val awaitInitializationMutex = Mutex()
@@ -132,6 +134,7 @@ class DefaultTangemSdkManager(
                 card = null,
                 derivationsFinder = derivationsFinder,
                 allowsRequestAccessCodeFromRepository = allowsRequestAccessCodeFromRepository,
+                visaCardScanHandler = visaCardScanHandler,
             ),
             cardId = cardId,
             initialMessage = message,

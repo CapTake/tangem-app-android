@@ -15,56 +15,59 @@ internal class DefaultVisaAuthRepository @Inject constructor(
     private val dispatchers: CoroutineDispatcherProvider,
 ) : VisaAuthRepository {
 
-    override suspend fun getCardAuthChallenge(cardId: String, cardPublicKey: String): VisaAuthChallenge.Card =
-        withContext(dispatchers.io) {
-            val response = visaAuthApi.generateNonceByCard(
-                cardId = cardId,
-                cardPublicKey = cardPublicKey,
-            )
+    override suspend fun getCardAuthChallenge(
+        cardId: String,
+        cardPublicKey: String,
+    ): com.tangem.domain.visa.model.VisaAuthChallenge.Card = withContext(dispatchers.io) {
+        val response = visaAuthApi.generateNonceByCard(
+            cardId = cardId,
+            cardPublicKey = cardPublicKey,
+        )
 
-            VisaAuthChallenge.Card(
-                challenge = response.nonce,
-                session = VisaAuthSession(response.sessionId),
-            )
-        }
+        com.tangem.domain.visa.model.VisaAuthChallenge.Card(
+            challenge = response.nonce,
+            session = com.tangem.domain.visa.model.VisaAuthSession(response.sessionId),
+        )
+    }
 
     override suspend fun getCustomerWalletAuthChallenge(
         cardId: String,
         walletPublicKey: String,
-    ): VisaAuthChallenge.Wallet = withContext(dispatchers.io) {
+    ): com.tangem.domain.visa.model.VisaAuthChallenge.Wallet = withContext(dispatchers.io) {
         val response = visaAuthApi.generateNonceByWalletAddress(
             customerId = cardId,
             customerWalletAddress = walletPublicKey,
         )
 
-        VisaAuthChallenge.Wallet(
+        com.tangem.domain.visa.model.VisaAuthChallenge.Wallet(
             challenge = response.nonce,
-            session = VisaAuthSession(response.sessionId),
+            session = com.tangem.domain.visa.model.VisaAuthSession(response.sessionId),
         )
     }
 
-    override suspend fun getAccessTokens(signedChallenge: VisaAuthSignedChallenge): VisaAuthTokens =
-        withContext(dispatchers.io) {
-            val response = when (signedChallenge) {
-                is VisaAuthSignedChallenge.ByCardPublicKey -> {
-                    visaAuthApi.getAccessToken(
-                        sessionId = signedChallenge.challenge.session.sessionId,
-                        signature = signedChallenge.signature,
-                        salt = signedChallenge.salt,
-                    )
-                }
-                is VisaAuthSignedChallenge.ByWallet -> {
-                    visaAuthApi.getAccessToken(
-                        sessionId = signedChallenge.challenge.session.sessionId,
-                        signature = signedChallenge.signature,
-                        salt = null,
-                    )
-                }
+    override suspend fun getAccessTokens(
+        signedChallenge: com.tangem.domain.visa.model.VisaAuthSignedChallenge,
+    ): com.tangem.domain.visa.model.VisaAuthTokens = withContext(dispatchers.io) {
+        val response = when (signedChallenge) {
+            is com.tangem.domain.visa.model.VisaAuthSignedChallenge.ByCardPublicKey -> {
+                visaAuthApi.getAccessToken(
+                    sessionId = signedChallenge.challenge.session.sessionId,
+                    signature = signedChallenge.signature,
+                    salt = signedChallenge.salt,
+                )
             }
-
-            VisaAuthTokens(
-                accessToken = response.accessToken,
-                refreshToken = response.refreshToken,
-            )
+            is com.tangem.domain.visa.model.VisaAuthSignedChallenge.ByWallet -> {
+                visaAuthApi.getAccessToken(
+                    sessionId = signedChallenge.challenge.session.sessionId,
+                    signature = signedChallenge.signature,
+                    salt = null,
+                )
+            }
         }
+
+        com.tangem.domain.visa.model.VisaAuthTokens(
+            accessToken = response.accessToken,
+            refreshToken = response.refreshToken,
+        )
+    }
 }

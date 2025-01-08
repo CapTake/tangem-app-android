@@ -5,6 +5,8 @@ plugins {
 }
 
 dependencies {
+    api(projects.domain.visa.models)
+
     implementation(deps.tangem.card.core)
     implementation(deps.moshi.kotlin)
     implementation(deps.kotlin.serialization)
