@@ -13,6 +13,8 @@ import com.tangem.domain.visa.model.VisaAuthSignedChallenge
 import com.tangem.domain.visa.model.VisaCardActivationStatus
 import com.tangem.domain.visa.model.toSignedChallenge
 import com.tangem.domain.visa.repository.VisaAuthRepository
+import com.tangem.operations.attestation.AttestCardKeyCommand
+import com.tangem.operations.attestation.AttestCardKeyResponse
 import com.tangem.operations.derivation.DeriveWalletPublicKeyTask
 import com.tangem.operations.sign.SignHashCommand
 import com.tangem.operations.sign.SignHashResponse
@@ -211,7 +213,6 @@ internal class VisaCardScanHandler(
         Timber.i("Received challenge to sign: ${challengeResponse.challenge}")
 
         signChallengeWithCard(session = session, challenge = challengeResponse.challenge) { result ->
-            @Suppress("UnusedPrivateMember")
             val attestCardKeyResponse = when (result) {
                 is CompletionResult.Success -> {
                     Timber.i("Challenged signed.")
@@ -224,7 +225,29 @@ internal class VisaCardScanHandler(
                 }
             }
 
-            TODO() // implement card activation status handling (AND-9497)
+            coroutineScope.launch {
+                @Suppress("UnusedPrivateMember")
+                val authorizationTokensResponse = runCatching {
+                    visaAuthRepository.getAccessTokens(
+                        signedChallenge = challengeResponse.toSignedChallenge(
+                            signedChallenge = attestCardKeyResponse.cardSignature.toHexString(),
+                            salt = attestCardKeyResponse.salt.toHexString(),
+                        ),
+                    )
+                }.getOrElse {
+                    Timber.e("Failed to sign challenge with Card public key. Plain error: ${it.message}")
+                    callback(
+                        CompletionResult.Failure(
+                            TangemSdkError.Underlying(
+                                customMessage = it.message ?: "Unknown error",
+                            ),
+                        ),
+                    )
+                    return@launch
+                }
+
+                TODO() // implement card activation status handling (AND-9497)
+            }
         }
     }
 
@@ -251,14 +274,9 @@ internal class VisaCardScanHandler(
     private fun signChallengeWithCard(
         session: CardSession,
         challenge: String,
-        callback: (result: CompletionResult<SignHashResponse>) -> Unit,
+        callback: (result: CompletionResult<AttestCardKeyResponse>) -> Unit,
     ) {
-        val card = session.environment.card ?: run {
-            callback(CompletionResult.Failure(TangemSdkError.MissingPreflightRead()))
-            return
-        }
-
-        val signHashCommand = SignHashCommand(card.cardPublicKey, challenge.toByteArray(), null)
+        val signHashCommand = AttestCardKeyCommand(challenge = challenge.toByteArray())
         signHashCommand.run(session) { result ->
             when (result) {
                 is CompletionResult.Success -> {
