@@ -96,15 +96,26 @@ jobs:
               echo 'Deploying APK to Google Play Internal...'
               
               fastlane build \
-                versionCode:\"$version_code\" \
-                versionName:\"$version_name\" \
-                keystore:\"\$keystore\" \
-                store_password:\"$store_password\" \
-                key_alias:\"$key_alias\" \
-                key_password:\"$key_password\" \
+                versionCode:$version_code \
+                versionName:$version_name \
+                keystore:$keystore \
+                store_password:$store_password \
+                key_alias:$key_alias \
+                key_password:$key_password \
                 launched_from_github_action:true
           
               cp app/build/outputs/apk/release/app-release.apk /home/ubuntu/apks/app-release-\"$version_code\"-\"$version_name\".apk
+          
+          java -jar $DEX_PROTECTOR_HOME/dexprotector.jar \
+                -licenseFile $DEX_PROTECTOR_HOME/dexprotector.licel \
+                -configFile $DEX_PROTECTOR_HOME/dex-android-config.xml \
+                -signMode release \
+                -sha256CertificateFingerprint TODO-9553
+                -keystore $keystore \
+                -alias $key_alias \
+                -storepass $store_password \
+                -keypass $key_password \
+                app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/app-release-protected.apk
           
               echo 'Deploying APK to Google Play Internal...';
           
