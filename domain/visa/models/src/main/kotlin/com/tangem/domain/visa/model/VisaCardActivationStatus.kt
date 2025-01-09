@@ -6,5 +6,5 @@ sealed class VisaCardActivationStatus {
 
     data class NotStartedActivation(val activationInput: VisaActivationInput) : VisaCardActivationStatus()
 
-    object Blocked
+    data object Blocked : VisaCardActivationStatus()
 }

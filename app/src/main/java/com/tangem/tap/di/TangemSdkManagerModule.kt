@@ -19,11 +19,11 @@ import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-class TangemSdkManagerModule {
+internal class TangemSdkManagerModule {
 
     @Provides
     @Singleton
-    internal fun provideTangemSdkManager(
+    fun provideTangemSdkManager(
         @ApplicationContext context: Context,
         cardSdkConfigRepository: CardSdkConfigRepository,
         visaCardScanHandler: VisaCardScanHandler,
@@ -41,7 +41,7 @@ class TangemSdkManagerModule {
 
     @Provides
     @Singleton
-    internal fun provideVisaCardScanHandler(visaAuthRepository: VisaAuthRepository): VisaCardScanHandler {
+    fun provideVisaCardScanHandler(visaAuthRepository: VisaAuthRepository): VisaCardScanHandler {
         return VisaCardScanHandler(
             visaAuthRepository = visaAuthRepository,
             coroutineScope = CoroutineScope(Dispatchers.Main),
