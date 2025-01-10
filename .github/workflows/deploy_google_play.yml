@@ -3,7 +3,7 @@ name: Deploy to Google Play Internal
 on:
   push:
     branches:
-      - 'feature/AND-9553_add_dexprotector_step'
+      - 'release'
   workflow_dispatch:
 
 env:
@@ -88,6 +88,7 @@ jobs:
             sh -c "
               cd /workspace;
   
+              # decoding keystore
               echo \"\$keystore_encoded_base64\" | base64 --decode > keystore
               export keystore=\$(pwd)/keystore
               
@@ -96,6 +97,7 @@ jobs:
                 exit 1
               fi
               
+              # building release
               fastlane build \
                 versionCode:\"\$version_code\" \
                 versionName:\"\$version_name\" \
@@ -105,9 +107,9 @@ jobs:
                 key_password:\"\$key_password\" \
                 launched_from_github_action:true
           
+              # protecting apk
               java -jar $DEX_PROTECTOR_HOME/dexprotector.jar \
                 -licenseFile $DEX_PROTECTOR_HOME/dexprotector.licel \
-                -configFile $DEX_PROTECTOR_HOME/dex-android-config.xml \
                 -signMode release \
                 -sha256CertificateFingerprint $SHA_256_CERTIFICATE_FINGERPRINT \
                 -keystore \$keystore \
@@ -117,15 +119,27 @@ jobs:
                 app/build/outputs/apk/release/app-release.apk \
                 app/build/outputs/apk/release/app-release-protected.apk
           
-              echo 'Deploying APK to Google Play Internal...';
+              # protecting aar
+              java -jar $DEX_PROTECTOR_HOME/dexprotector.jar \
+                -licenseFile $DEX_PROTECTOR_HOME/dexprotector.licel \
+                -signMode release \
+                -sha256CertificateFingerprint $SHA_256_CERTIFICATE_FINGERPRINT \
+                -keystore \$keystore \
+                -alias $key_alias \
+                -storepass $store_password \
+                -keypass $key_password \
+                app/build/outputs/bundle/release/app-release.aab \
+                app/build/outputs/bundle/release/app-release-protected.aab
               
+              # copy apk and aab to host
               cp app/build/outputs/apk/release/app-release.apk /home/ubuntu/apks/app-release-$version_code-$version_name.apk     
               cp app/build/outputs/apk/release/app-release-protected.apk /home/ubuntu/apks/app-release-protected-$version_code-$version_name.apk
               
+              # upload to Google Play
               fastlane supply \
                 package_name:com.tangem.wallet \
                 track:internal \
-                aab:app/build/outputs/bundle/release/app-release.aab \
+                aab:app/build/outputs/bundle/release/app-release-protected.aab \
                 json_key_data:{TODO_AND-9952} \
                 release_status:completed \
                 skip_upload_apk:false \
