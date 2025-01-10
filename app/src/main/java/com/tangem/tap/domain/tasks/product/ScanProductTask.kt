@@ -42,6 +42,7 @@ import com.tangem.tap.mainScope
 import com.tangem.tap.proxy.redux.DaggerGraphState
 import com.tangem.tap.scope
 import com.tangem.tap.store
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlin.collections.set
 
@@ -49,6 +50,7 @@ internal class ScanProductTask(
     private val card: Card?,
     private val derivationsFinder: DerivationsFinder?,
     private val visaCardScanHandler: VisaCardScanHandler?,
+    private val visaCoroutineScope: CoroutineScope?,
     override val allowsRequestAccessCodeFromRepository: Boolean = false,
 ) : CardSessionRunnable<ScanResponse> {
 
@@ -122,10 +124,13 @@ internal class ScanProductTask(
             return
         }
 
-        visaCardScanHandler.handleVisaCardScan(
-            session = session,
-        ) { result ->
-            when (result) {
+        visaCoroutineScope ?: run {
+            callback(CompletionResult.Failure(TangemSdkError.InsNotSupported()))
+            return
+        }
+
+        visaCoroutineScope.launch {
+            when (val result = visaCardScanHandler.handleVisaCardScan(session = session)) {
                 is CompletionResult.Success -> {
                     scanWalletProcessor.proceed(
                         card = cardDto,

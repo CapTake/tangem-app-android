@@ -45,12 +45,9 @@ import com.tangem.tap.domain.twins.CreateSecondTwinWalletTask
 import com.tangem.tap.domain.twins.FinalizeTwinTask
 import com.tangem.tap.domain.visa.VisaCardScanHandler
 import com.tangem.wallet.R
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
 
 @Suppress("TooManyFunctions", "LargeClass")
@@ -129,16 +126,19 @@ internal class DefaultTangemSdkManager(
         allowsRequestAccessCodeFromRepository: Boolean,
     ): CompletionResult<ScanResponse> {
         val message = Message(resources.getStringSafe(messageRes ?: R.string.initial_message_scan_header))
-        return runTaskAsyncReturnOnMain(
-            runnable = ScanProductTask(
-                card = null,
-                derivationsFinder = derivationsFinder,
-                allowsRequestAccessCodeFromRepository = allowsRequestAccessCodeFromRepository,
-                visaCardScanHandler = visaCardScanHandler,
-            ),
-            cardId = cardId,
-            initialMessage = message,
-        ).also { sendScanResultsToAnalytics(it) }
+        return coroutineScope {
+            runTaskAsyncReturnOnMain(
+                runnable = ScanProductTask(
+                    card = null,
+                    derivationsFinder = derivationsFinder,
+                    allowsRequestAccessCodeFromRepository = allowsRequestAccessCodeFromRepository,
+                    visaCardScanHandler = visaCardScanHandler,
+                    visaCoroutineScope = this,
+                ),
+                cardId = cardId,
+                initialMessage = message,
+            ).also { sendScanResultsToAnalytics(it) }
+        }
     }
 
     override suspend fun createProductWallet(

@@ -3,7 +3,6 @@ package com.tangem.tap.di
 import android.content.Context
 import com.tangem.domain.card.BuildConfig
 import com.tangem.domain.card.repository.CardSdkConfigRepository
-import com.tangem.domain.visa.repository.VisaAuthRepository
 import com.tangem.sdk.api.TangemSdkManager
 import com.tangem.tap.domain.sdk.impl.DefaultTangemSdkManager
 import com.tangem.tap.domain.sdk.impl.MockTangemSdkManager
@@ -13,8 +12,6 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import javax.inject.Singleton
 
 @Module
@@ -37,14 +34,5 @@ internal class TangemSdkManagerModule {
                 visaCardScanHandler = visaCardScanHandler,
             )
         }
-    }
-
-    @Provides
-    @Singleton
-    fun provideVisaCardScanHandler(visaAuthRepository: VisaAuthRepository): VisaCardScanHandler {
-        return VisaCardScanHandler(
-            visaAuthRepository = visaAuthRepository,
-            coroutineScope = CoroutineScope(Dispatchers.Main),
-        )
     }
 }
