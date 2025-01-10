@@ -1,15 +1,17 @@
 package com.tangem.feature.tester.presentation.providers.viewmodel
 
+import androidx.core.util.PatternsCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tangem.blockchain.common.Blockchain
 import com.tangem.blockchain.common.network.providers.ProviderType
 import com.tangem.blockchainsdk.providers.BlockchainProvidersTypesManager
 import com.tangem.blockchainsdk.providers.MutableBlockchainProvidersTypesManager
+import com.tangem.feature.tester.impl.R
+import com.tangem.feature.tester.presentation.common.components.appbar.TopBarWithRefreshUM
 import com.tangem.feature.tester.presentation.navigation.InnerTesterRouter
 import com.tangem.feature.tester.presentation.providers.entity.BlockchainProvidersUM
-import com.tangem.feature.tester.presentation.providers.entity.BlockchainProvidersUM.ProviderUM
-import com.tangem.feature.tester.presentation.providers.entity.BlockchainProvidersUM.ProvidersUM
+import com.tangem.feature.tester.presentation.providers.entity.BlockchainProvidersUM.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -26,7 +28,14 @@ internal class BlockchainProvidersViewModel @Inject constructor(
     val state: StateFlow<BlockchainProvidersUM> get() = _state.asStateFlow()
 
     private val _state = MutableStateFlow(
-        value = BlockchainProvidersUM(onBackClick = {}, blockchainProviders = persistentListOf()),
+        value = BlockchainProvidersUM(
+            topBar = TopBarWithRefreshUM(
+                titleResId = R.string.blockchain_providers,
+                onBackClick = {},
+                refreshButton = TopBarWithRefreshUM.RefreshButton(isVisible = false, onRefreshClick = ::onRefreshClick),
+            ),
+            blockchainProviders = persistentListOf(),
+        ),
     )
 
     private val manager = blockchainProvidersTypesManager as MutableBlockchainProvidersTypesManager
@@ -37,15 +46,24 @@ internal class BlockchainProvidersViewModel @Inject constructor(
 
     fun setupNavigation(router: InnerTesterRouter) {
         _state.update { state ->
-            state.copy(onBackClick = router::back)
+            state.copy(
+                topBar = state.topBar.copy(onBackClick = router::back),
+            )
         }
     }
 
     private fun subscribeOnBlockchainProviderTypesUpdates() {
         manager.get()
             .onEach { blockchainProviderTypes ->
+                val isChanged = !manager.isMatchWithMerged()
+
                 _state.update { state ->
-                    state.copy(blockchainProviders = blockchainProviderTypes.toProvidersUM())
+                    state.copy(
+                        topBar = state.topBar.copy(
+                            refreshButton = state.topBar.refreshButton.copy(isVisible = isChanged),
+                        ),
+                        blockchainProviders = blockchainProviderTypes.toProvidersUM(),
+                    )
                 }
             }
             .launchIn(viewModelScope)
@@ -60,11 +78,22 @@ internal class BlockchainProvidersViewModel @Inject constructor(
                 blockchainName = blockchain.fullName,
                 blockchainSymbol = blockchain.currency,
                 providers = providers.map(BlockchainProvidersUM::ProviderUM).toImmutableList(),
-                onDrop = ::onDrop,
                 isExpanded = false,
+                onDrop = { prev, current -> onDrop(blockchain.id, prev, current) },
+                addPublicProviderDialog = AddPublicProviderDialogUM(
+                    hasError = false,
+                    onValueChange = { onPublicProviderUrlChange(id = blockchain.id, url = it) },
+                    onSaveClick = { onAddProviderClick(id = blockchain.id, url = it) },
+                ),
             )
         }
             .toImmutableList()
+    }
+
+    private fun onRefreshClick() {
+        viewModelScope.launch {
+            manager.update()
+        }
     }
 
     private fun onDrop(id: String, prev: Int, current: Int) {
@@ -74,16 +103,9 @@ internal class BlockchainProvidersViewModel @Inject constructor(
 
         viewModelScope.launch {
             _state.update {
-                it.copy(
-                    blockchainProviders = it.blockchainProviders.map { block ->
-                        if (block.blockchainId == id) {
-                            block.copy(providers = providers.toImmutableList())
-                        } else {
-                            block
-                        }
-                    }
-                        .toImmutableList(),
-                )
+                it.copyProvidersUM(blockchainId = id) {
+                    copy(providers = providers.toImmutableList())
+                }
             }
 
             manager.update(
@@ -135,5 +157,46 @@ internal class BlockchainProvidersViewModel @Inject constructor(
             set(prev, this[current])
             set(current, this[prev])
         }
+    }
+
+    private fun onPublicProviderUrlChange(id: String, url: String) {
+        _state.update {
+            it.copyProvidersUM(blockchainId = id) {
+                copy(
+                    addPublicProviderDialog = addPublicProviderDialog.copy(
+                        hasError = !PatternsCompat.WEB_URL.matcher(url).matches(),
+                    ),
+                )
+            }
+        }
+    }
+
+    private fun onAddProviderClick(id: String, url: String) {
+        val providers = _state.value
+            .blockchainProviders.first { it.blockchainId == id }
+            .providers
+
+        viewModelScope.launch {
+            manager.update(
+                blockchain = Blockchain.fromId(id),
+                providers = listOf(ProviderType.Public(url = url)) + providers.map(ProviderUM::type),
+            )
+        }
+    }
+
+    private fun BlockchainProvidersUM.copyProvidersUM(
+        blockchainId: String,
+        update: ProvidersUM.() -> ProvidersUM,
+    ): BlockchainProvidersUM {
+        return copy(
+            blockchainProviders = _state.value.blockchainProviders.map {
+                if (it.blockchainId == blockchainId) {
+                    it.update()
+                } else {
+                    it
+                }
+            }
+                .toImmutableList(),
+        )
     }
 }

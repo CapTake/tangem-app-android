@@ -5,10 +5,7 @@ import android.content.ClipDescription
 import android.view.View
 import androidx.compose.animation.*
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.*
 import androidx.compose.foundation.draganddrop.dragAndDropSource
 import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -22,18 +19,24 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draganddrop.*
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastForEachIndexed
-import com.tangem.core.ui.components.SpacerH8
-import com.tangem.core.ui.components.appbar.AppBarWithBackButton
+import com.tangem.core.ui.components.AdditionalTextInputDialogUM
+import com.tangem.core.ui.components.DialogButtonUM
+import com.tangem.core.ui.components.TextInputDialog
 import com.tangem.core.ui.components.rows.RowText
 import com.tangem.core.ui.extensions.getActiveIconRes
+import com.tangem.core.ui.extensions.resourceReference
 import com.tangem.core.ui.extensions.stringResourceSafe
 import com.tangem.core.ui.res.TangemTheme
 import com.tangem.feature.tester.impl.R
+import com.tangem.feature.tester.presentation.common.components.appbar.TopBarWithRefresh
+import com.tangem.feature.tester.presentation.common.components.notification.CustomSetupNotification
 import com.tangem.feature.tester.presentation.providers.entity.BlockchainProvidersUM
 import com.tangem.feature.tester.presentation.providers.entity.BlockchainProvidersUM.ProviderUM
 import com.tangem.feature.tester.presentation.providers.entity.BlockchainProvidersUM.ProvidersUM
@@ -50,12 +53,20 @@ internal fun BlockchainProvidersScreen(state: BlockchainProvidersUM) {
             .background(TangemTheme.colors.background.primary),
     ) {
         LazyColumn {
-            stickyHeader {
-                AppBarWithBackButton(
-                    onBackClick = state.onBackClick,
-                    text = stringResourceSafe(id = R.string.blockchain_providers),
-                    containerColor = TangemTheme.colors.background.primary,
-                )
+            stickyHeader { TopBarWithRefresh(state = state.topBar) }
+
+            if (state.topBar.refreshButton.isVisible) {
+                item(key = "notification", contentType = "notification") {
+                    CustomSetupNotification(
+                        subtitle = resourceReference(
+                            id = R.string.blockchain_providers_custom_setup_warning_description,
+                        ),
+                        modifier = Modifier
+                            .animateItem()
+                            .padding(horizontal = 16.dp)
+                            .padding(bottom = 8.dp),
+                    )
+                }
             }
 
             items(
@@ -74,8 +85,8 @@ private fun BlockchainProvidersItem(state: ProvidersUM) {
 
     ExpandableBlockchainRow(
         state = state,
-        modifier = Modifier.clickable { isExpanded = !isExpanded },
         content = { Providers(state = state, isExpanded = isExpanded) },
+        onExpandStateChange = { isExpanded = !isExpanded },
     )
 }
 
@@ -83,25 +94,23 @@ private fun BlockchainProvidersItem(state: ProvidersUM) {
 private fun ExpandableBlockchainRow(
     state: ProvidersUM,
     content: @Composable () -> Unit,
-    modifier: Modifier = Modifier,
+    onExpandStateChange: () -> Unit,
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-    ) {
-        BlockchainRow(state)
+    Column {
+        BlockchainRow(state = state, onExpandStateChange = onExpandStateChange)
 
         content()
     }
 }
 
 @Composable
-private fun BlockchainRow(state: ProvidersUM) {
+private fun BlockchainRow(state: ProvidersUM, onExpandStateChange: () -> Unit) {
     Row(
         modifier = Modifier
+            .clickable { onExpandStateChange() }
+            .padding(horizontal = 16.dp)
             .fillMaxWidth()
-            .padding(vertical = 16.dp),
+            .padding(vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -145,22 +154,26 @@ private fun BlockchainRow(state: ProvidersUM) {
 private fun Providers(state: ProvidersUM, isExpanded: Boolean) {
     AnimatedVisibility(
         visible = isExpanded,
+        modifier = Modifier.padding(horizontal = 16.dp),
         enter = fadeIn() + expandVertically(),
         exit = fadeOut() + shrinkVertically(),
         label = "providers_visibility",
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(
+            modifier = Modifier.padding(vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
             state.providers.fastForEachIndexed { index, provider ->
                 key("${provider.name}_$index") {
                     ProviderItem(
                         index = index,
                         state = provider,
-                        onDrop = { prev, new -> state.onDrop(state.blockchainId, prev, new) },
+                        onDrop = { prev, new -> state.onDrop(prev, new) },
                     )
-
-                    if (index == state.providers.lastIndex) SpacerH8()
                 }
             }
+
+            AddProviderButton(state = state.addPublicProviderDialog)
         }
     }
 }
@@ -186,18 +199,8 @@ private fun ProviderItem(index: Int, state: ProviderUM, onDrop: (Int, Int) -> Un
         )
     }
 
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = "${index + 1}.",
-            color = TangemTheme.colors.text.accent,
-            overflow = TextOverflow.Ellipsis,
-            maxLines = 1,
-            style = TangemTheme.typography.body2,
-        )
+    ProviderItemContainer {
+        ProviderIndex(index = index)
 
         Box(
             modifier = Modifier
@@ -233,6 +236,99 @@ private fun ProviderItem(index: Int, state: ProviderUM, onDrop: (Int, Int) -> Un
             )
         }
     }
+}
+
+@Composable
+private fun ProviderIndex(index: Int) {
+    Text(
+        text = "${index + 1}.",
+        color = TangemTheme.colors.text.accent,
+        overflow = TextOverflow.Ellipsis,
+        maxLines = 1,
+        style = TangemTheme.typography.body2,
+    )
+}
+
+@Composable
+private fun AddProviderButton(state: BlockchainProvidersUM.AddPublicProviderDialogUM) {
+    var isDialogVisible by remember { mutableStateOf(value = false) }
+
+    ProviderItemContainer {
+        Box(
+            modifier = Modifier
+                .clip(shape = RoundedCornerShape(16.dp))
+                .clickable(onClick = { isDialogVisible = true })
+                .weight(1f)
+                .border(
+                    border = BorderStroke(width = 2.dp, color = TangemTheme.colors.icon.accent),
+                    shape = RoundedCornerShape(16.dp),
+                )
+                .padding(horizontal = 8.dp, vertical = 2.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_plus_24),
+                contentDescription = null,
+                tint = TangemTheme.colors.icon.accent,
+            )
+        }
+    }
+
+    if (isDialogVisible) {
+        AddPublicProviderDialog(
+            state = state,
+            onDismiss = { isDialogVisible = false },
+        )
+    }
+}
+
+@Composable
+private fun AddPublicProviderDialog(state: BlockchainProvidersUM.AddPublicProviderDialogUM, onDismiss: () -> Unit) {
+    var value by remember { mutableStateOf(value = TextFieldValue()) }
+
+    TextInputDialog(
+        fieldValue = value,
+        confirmButton = DialogButtonUM(
+            title = stringResourceSafe(R.string.common_save),
+            enabled = value.text.isNotBlank() && !state.hasError,
+            onClick = {
+                state.onSaveClick(
+                    buildString {
+                        append(value.text.trim())
+
+                        if (!endsWith("/")) append("/")
+                    },
+                )
+                onDismiss()
+            },
+        ),
+        onDismissDialog = onDismiss,
+        onValueChange = {
+            value = it
+            state.onValueChange(it.text)
+        },
+        textFieldParams = AdditionalTextInputDialogUM(
+            label = "Url",
+            placeholder = "https://...",
+            isError = state.hasError,
+            errorText = "Invalid url",
+        ),
+        title = "Public provider",
+        dismissButton = DialogButtonUM(
+            title = stringResourceSafe(id = R.string.common_cancel),
+            onClick = onDismiss,
+        ),
+    )
+}
+
+@Composable
+private fun ProviderItemContainer(content: @Composable RowScope.() -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        content = content,
+    )
 }
 
 private class ProvidersDnDTarget(
